@@ -101,7 +101,7 @@ It gives you one place to manage repositories, issue-driven worktrees, embedded 
 ### Homebrew (macOS)
 
 ```bash
-brew install penso/arbor/arbor
+brew install penso/tap/arbor
 ```
 
 ### Prebuilt Binaries

@@ -5,7 +5,7 @@
 Homebrew on macOS:
 
 ```bash
-brew install penso/arbor/arbor
+brew install penso/tap/arbor
 ```
 
 From source:

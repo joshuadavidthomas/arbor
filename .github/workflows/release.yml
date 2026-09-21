@@ -559,18 +559,32 @@ jobs:
 
           cask_content=$(./scripts/ci/update-homebrew-cask.sh "${tag}" "${sha256}")
 
-          # Clone the tap repo and update the cask
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/penso/homebrew-arbor.git" tap
-          mkdir -p tap/Casks
-          echo "${cask_content}" > tap/Casks/arbor.rb
-
+          # Shared tap: other projects publish here too, so rebase and retry
+          # rather than failing a release on a concurrent push.
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/penso/homebrew-tap.git" tap
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/arbor.rb
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
+
+          for attempt in 1 2 3 4 5; do
+            mkdir -p Casks
+            echo "${cask_content}" > Casks/arbor.rb
+            git add Casks/arbor.rb
+            if git diff --cached --quiet; then
+              echo "No changes to commit"
+              break
+            fi
             git commit -m "Update arbor to ${tag}"
-            git push
-          fi
+            if git push; then
+              echo "Pushed arbor ${tag} to the tap"
+              break
+            fi
+            if [[ "${attempt}" == 5 ]]; then
+              echo "Could not push to the tap after ${attempt} attempts" >&2
+              exit 1
+            fi
+            echo "Tap moved underneath us; rebasing and retrying"
+            git fetch origin
+            git reset --hard origin/HEAD
+            sleep $(( attempt * 5 ))
+          done
